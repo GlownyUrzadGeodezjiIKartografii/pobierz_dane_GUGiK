@@ -1,0 +1,22 @@
+{
+"type": "FeatureCollection",
+"name": "wojewodztwa",
+"features": [
+{ "type": "Feature", "properties": { "Nazwa": "dolnośląskie", "TERYT": "02" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "kujawsko-pomorskie", "TERYT": "04" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "lubelskie", "TERYT": "06" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "lubuskie", "TERYT": "08" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "łódzkie", "TERYT": "10" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "małopolskie", "TERYT": "12" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "mazowieckie", "TERYT": "14" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "opolskie", "TERYT": "16" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "podkarpackie", "TERYT": "18" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "podlaskie", "TERYT": "20" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "pomorskie", "TERYT": "22" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "śląskie", "TERYT": "24" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "świętokrzyskie", "TERYT": "26" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "warmińsko-mazurskie", "TERYT": "28" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "wielkopolskie", "TERYT": "30" }, "geometry": null },
+{ "type": "Feature", "properties": { "Nazwa": "zachodniopomorskie", "TERYT": "32" }, "geometry": null }
+]
+}

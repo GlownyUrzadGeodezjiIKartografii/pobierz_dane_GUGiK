@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/pobierz_dane_GUGiK" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>

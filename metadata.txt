@@ -1,0 +1,54 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=Pobierz dane GUGiK
+qgisMinimumVersion=3.0
+description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB
+version=1.0.0
+author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
+email=uslugi.iip@gugik.gov.pl
+
+about=Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii.
+
+tracker=http://bugs
+repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
+
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+changelog=
+    1.0.0 Pierwsze publiczne wydanie wtyczki
+          - Dodano możliwość pobierania działek po przez:
+		* Wybranie obszaru administracyjnego (województwa, powiaty, gminy, obręby)
+			> W Przypadku województw i powiatów sugerowane jest pobieranie paczek z modułu Pobierz dane w geoportalu krajowym (https://mapy.geoportal.gov.pl/imapnext/imap/index.html?moduleId=modulPD)
+		* Identyfikator działki lub listę indentyfikatorów działek rozdzielonych znakiem nowej linii
+		* Wskazanie zasięgu w oknie mapy
+		* Wskazanie warstwy poligonowej (powyżej 100 wierzchołków pojedynczego obiektu wykorzystywany jest zasięg obiektu)
+		* Zakres aktualnego widoku mapy
+		* Wskazanie nazwy obrębu oraz numeru działki
+
+# Tags are comma separated with spaces allowed
+tags=python,egib,gugik,wfs,pobieranie,pobieracz,uldk,powiat,download,kataster
+
+homepage=https://www.gov.pl/web/gugik
+category=Plugins
+icon=icon1000.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+# If the plugin can run on QGIS Server.
+server=False
+
