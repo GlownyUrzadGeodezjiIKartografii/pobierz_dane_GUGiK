@@ -89,60 +89,61 @@ class DownloadTask(QgsTask):
 
     def _manual_parse_geometry(self, gml_element):
         try:
-            def find_elem(node, tag_name):
-                child = node.firstChild()
-                while not child.isNull():
-                    if child.nodeType() == QDomNode.ElementNode:
-                        elem = child.toElement()
-                        if elem.localName() == tag_name:
-                            return elem
-                    child = child.nextSibling()
-                return None
+            all_rings = []
 
-            exterior = find_elem(gml_element, "exterior")
-            if not exterior:
-                if gml_element.localName() == "LinearRing":
-                    ring = gml_element
-                else:
-                    return None
-            else:
-                ring = find_elem(exterior, "LinearRing")
-            
-            if not ring:
-                return None
+            # Funkcja pomocnicza do wyciągania punktów z dowolnego węzła (exterior/interior)
+            def extract_points_from_ring_node(parent_node):
+                ring = None
+                # Szukamy LinearRing wewnątrz exterior/interior
+                child = parent_node.firstChild()
+                while not child.isNull():
+                    if child.toElement().localName() == "LinearRing":
+                        ring = child.toElement()
+                        break
+                    child = child.nextSibling()
                 
-            pos_list = find_elem(ring, "posList")
-            if not pos_list:
-                return None
-            
-            coords_text = pos_list.text().strip()
-            if not coords_text:
-                return None
+                if not ring: return None
                 
-            dim = 2
-            if pos_list.hasAttribute("srsDimension"):
-                 try:
-                     dim = int(pos_list.attribute("srsDimension"))
-                 except:
-                     pass
-            
-            coords = coords_text.split()
-            points = []
-            
-            for i in range(0, len(coords), dim):
-                if i+1 < len(coords):
-                    try:
-                        val1 = float(coords[i])
-                        val2 = float(coords[i+1])
-                        points.append(QgsPointXY(val2, val1))
-                    except:
-                        pass
-            
-            if points:
-                return QgsGeometry.fromPolygonXY([points])
+                # Szukamy posList wewnątrz LinearRing
+                pos_list = None
+                child = ring.firstChild()
+                while not child.isNull():
+                    if child.toElement().localName() == "posList":
+                        pos_list = child.toElement()
+                        break
+                    child = child.nextSibling()
+                    
+                if not pos_list: return None
+                
+                coords_text = pos_list.text().strip()
+                dim = int(pos_list.attribute("srsDimension", "2"))
+                coords = coords_text.split()
+                
+                points = []
+                for i in range(0, len(coords), dim):
+                    if i + 1 < len(coords):
+                        # Pamiętaj o kolejności (EGiB często ma Y X, czyli Lat Lon)
+                        points.append(QgsPointXY(float(coords[i+1]), float(coords[i])))
+                return points
+
+            # Iterujemy po wszystkich dzieciach głównego elementu (np. Polygon)
+            child = gml_element.firstChild()
+            while not child.isNull():
+                elem = child.toElement()
+                local_name = elem.localName()
+                
+                if local_name in ["exterior", "interior"]:
+                    pts = extract_points_from_ring_node(elem)
+                    if pts:
+                        all_rings.append(pts)
+                
+                child = child.nextSibling()
+
+            if all_rings:
+                return QgsGeometry.fromPolygonXY(all_rings)
                 
         except Exception as e:
-            QgsMessageLog.logMessage(f"[DownloadTask] Manual parsing exception: {e}", "PobieranieEGIB", Qgis.Warning)
+            QgsMessageLog.logMessage(f"Manual parsing error: {e}", "PobieranieEGIB", Qgis.Warning)
         
         return None
 

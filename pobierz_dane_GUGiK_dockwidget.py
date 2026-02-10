@@ -88,6 +88,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.prg_client = PRGClient()
         self.load_data()
         self.connect_signals()
+        self.local_filter_geom = None
 
         # Add checkbox for precise spatial filtering to admin tab
         if hasattr(self, 'tab_admin'):
@@ -147,7 +148,14 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             precise_layout.addStretch()
 
             self.tab_precise.setLayout(precise_layout)
-            self.tabWidget.addTab(self.tab_precise, "Obręb + nr działki")
+
+            settings_index = self.tabWidget.indexOf(self.tab_settings)
+            if settings_index != -1:
+                # Wstawiamy przed zakładkę ustawień
+                self.tabWidget.insertTab(settings_index, self.tab_precise, "Obręb + nr działki")
+            else:
+                # Jeśli z jakiegoś powodu nie znaleziono tab_settings, dodaj na koniec
+                self.tabWidget.addTab(self.tab_precise, "Obręb + nr działki")
 
         # Add layer selection and download button to map tab
         if hasattr(self, 'tab_map'):
@@ -277,6 +285,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     def validate_teryt(self):
         text = self.txt_teryt_manual.text().strip()
+        text = text.split(" ")[-1].replace(")","") if " " in text else text
         if not text:
             self.lbl_teryt_info.setText("")
             return
@@ -637,6 +646,8 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.show_error("Wpisz kod TERYT do wyszukania.")
             return
 
+        manual_text = manual_text.split(" ")[-1].replace(")", "") if "(" in manual_text else manual_text
+
         QgsMessageLog.logMessage(
             f"[UI] Pobieranie geometrii PRG dla TERYT: {manual_text}",
             "PobieranieEGIB", Qgis.Info
@@ -868,7 +879,6 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
 
         # Iterate through features and download parcels
-        all_features = []
         client = WFSClient()
         canvas_crs = self.canvas.mapSettings().destinationCrs()
         target_crs = QgsCoordinateReferenceSystem("EPSG:2180")
@@ -880,9 +890,20 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         current = 0
         skipped = 0
+        local_filter_geom = None
+
+        attributes = [self.list_attributes.item(i).text() for i in range(self.list_attributes.count()) 
+                if self.list_attributes.item(i).checkState() == Qt.Checked]
+        if len(attributes) == self.list_attributes.count(): attributes = None
+
         for feat in layer.getFeatures():
             current += 1
             geom = feat.geometry()
+
+            QgsMessageLog.logMessage(
+                    f"[UI] Pobieranie {current}/{feature_count}",
+                    "PobieranieEGIB", Qgis.Warning
+                )
 
             # Skip invalid geometries
             if geom is None or geom.isEmpty():
@@ -901,74 +922,78 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             if geom.constGet().nCoordinates() > 100:
                 QgsMessageLog.logMessage(f"[UI] Geometria {current} posiada dużo wierzchołków ({geom.constGet().nCoordinates()}), używam BBOX + filtr lokalny", "PobieranieEGIB", Qgis.Info)
                 filter_xml = client.build_spatial_filter(geom.asWkt(), use_bbox=True)
-                local_filter_geom = geom
+                #QgsMessageLog.logMessage(
+                    #f"[UI] Geometria fitrująca: {filter_xml}",
+                    #"PobieranieEGIB", Qgis.Warning
+                #)
+                local_filter_geom = geom # feat.geometry().transform(xform)
             else:
                 filter_xml = client.build_spatial_filter(geom.asWkt(), use_bbox=False)
                 local_filter_geom = None
 
+
+
             # Download...
-            try:
-                gml_content = client.download(filter_xml)
-                if gml_content:
-                    from .download_task import DownloadTask
-                    temp_task = DownloadTask(filter_xml)
-                    features = temp_task._parse_gml(gml_content)
+
+            self.local_filter_geom = local_filter_geom
+            
+            local_filter = True if self.local_filter_geom else False
+
+            if feature_count < 2:
+                self.start_download(filter_xml, total=100000, attributes=attributes, local_filter_geom=True)
+                return
+
+            start_index = 0
+            count = 1000 # Page size
+            total_expected = 100000
+            features_data = [] # List of dicts: {'geom': wkt, 'attrs': {...}}
+            exception = None
+            stopped = False
+
+            temp_task = DownloadTask(filter_xml, total_expected=total_expected, attributes=attributes)
+            
+            while not stopped:
+                try:
                     
-                    if local_filter_geom:
-                        # Apply local filter
-                        filtered = []
-                        for f in features:
-                            f_geom = QgsGeometry.fromWkt(f['geom'])
-                            if f_geom.intersects(local_filter_geom):
-                                filtered.append(f)
-                        features = filtered
-                        
-                    all_features.extend(features)
-                    QgsMessageLog.logMessage(f"[UI] Pobrano {len(features)} działek dla geometrii {current}/{feature_count}", "PobieranieEGIB", Qgis.Info)
+                    gml_content = client.download(filter_xml, start_index, count, attributes=attributes)
+                    
+                    new_features = temp_task._parse_gml(gml_content)
+                    features_data.extend(new_features)
+                    
+                    if len(new_features) < count:
+                        break
+                    
+                    start_index += count
+                    
+                except Exception as e:
+                    # self.exception = e
+                    # return False
+                    ...
+                    
+            try:
+
+                if local_filter_geom:
+                    filtered = []
+                    for f in features_data:
+                        f_geom = QgsGeometry.fromWkt(f['geom'])
+                        if f_geom.intersects(local_filter_geom):
+                            filtered.append(f)
+                    features_data = filtered
+            
             except Exception as e:
-                QgsMessageLog.logMessage(f"[UI] Błąd dla geometrii {current}: {e}", "PobieranieEGIB", Qgis.Warning)
+                    QgsMessageLog.logMessage(f"[UI] Błąd geometrii: {e}", "PobieranieEGIB", Qgis.Warning)
+            
+            self.create_layer(features_data)
 
-        QgsMessageLog.logMessage(
-            f"[UI] Pobrano łącznie {len(all_features)} działek z warstwy (pominięto: {skipped}/{feature_count})",
-            "PobieranieEGIB", Qgis.Info
-        )
+            QgsMessageLog.logMessage(
+                f"[UI] Pobieranie {current}/{feature_count} z filtrem localnym: {local_filter}",
+                "PobieranieEGIB", Qgis.Info
+            )
+        self.show_info(f"Pobrano obiekty.")
 
-        if not all_features:
-            self.show_info(f"Nie pobrano żadnych działek z warstwy '{layer.name()}'. Sprawdź logi dla szczegółów.")
-            return
 
-        # Create layer
-        self.create_layer(all_features)
-        # Rename layer
-        layers = QgsProject.instance().mapLayersByName("Dzialki")
-        if layers:
-            layers[0].setName(f"Działki - {layer.name()}")
-        
-        # Remove duplicates by id_dzialki
-        unique_features = {}
-        for f in all_features:
-            id_val = f.get('attrs', {}).get('id_dzialki')
-            if id_val and id_val not in unique_features:
-                unique_features[id_val] = f
-        
-        unique_features_list = list(unique_features.values())
-        
-        QgsMessageLog.logMessage(
-            f"[UI] Pobrano {len(unique_features_list)} unikalnych działek z warstwy", 
-            "PobieranieEGIB", Qgis.Info
-        )
-        
-        # Create layer
-        self.create_layer(unique_features_list)
-        # Rename layer
-        # layers = QgsProject.instance().mapLayersByName("Dzialki")
-        # if layers:
-            # layers[0].setName(f"Działki - {layer.name()}")
 
-        actual_layers = QgsProject.instance().mapLayersByName("Dzialki")
-        if actual_layers:
-            # Zakładamy, że ostatnio dodana jest na górze lub bierzemy pierwszą pasującą
-            actual_layers[0].setName(f"Działki - {layer.name()}")
+            # continue
 
     def start_check_hits(self, filter_xml):
         self.toggle_ui(False)
@@ -990,7 +1015,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if reply == QMessageBox.No:
             return
 
-        self.start_download(filter_xml, 10000, attributes=attributes)
+        self.start_download(filter_xml, 100000, attributes=attributes)
 
     def on_hits_checked(self, hits, filter_xml):
         if hits == -1:
@@ -1021,14 +1046,53 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.start_download(filter_xml, hits, attributes=attributes)
 
-    def start_download(self, filter_xml, total, attributes=None):
+    def start_download(self, filter_xml, total, attributes=None, local_filter_geom=False):
         self.progressBar.setRange(0, 100)
         self.btn_cancel.setVisible(True)
 
         self.download_task = DownloadTask(filter_xml, total_expected=total, attributes=attributes)
-        self.download_task.downloadFinished.connect(self.on_download_finished)
+
+        
+        if local_filter_geom:
+            self.download_task.downloadFinished.connect(self.on_download_finished_not_load)
+
+        else:
+            
+            self.download_task.downloadFinished.connect(self.on_download_finished)
         self.download_task.progressValue.connect(lambda val: self.progressBar.setValue(int(val)))
         QgsApplication.taskManager().addTask(self.download_task)
+
+    def on_download_finished_not_load(self, features_data):
+        # self.show_info("!!!")
+        # features_data is a list of dicts, or empty list on failure
+        if not features_data: # and self.download_task.exception:
+             self.show_error(f"Błąd pobierania")#: {self.download_task.exception}")
+             self.reset_ui()
+             return
+
+        if not features_data:
+             self.show_info("Pobieranie anulowane lub brak danych.")
+             self.reset_ui()
+             return
+        
+        local_filter_geom = self.local_filter_geom
+
+        try:
+
+            if local_filter_geom:
+                filtered = []
+                for f in features_data:
+                    f_geom = QgsGeometry.fromWkt(f['geom'])
+                    if f_geom.intersects(local_filter_geom):
+                        filtered.append(f)
+                features_data = filtered
+        
+        except Exception as e:
+                QgsMessageLog.logMessage(f"[UI] Błąd geometrii: {e}", "PobieranieEGIB", Qgis.Warning)
+        
+        self.create_layer(features_data)
+        self.reset_ui()
+        self.show_info(f"Pobrano {len(features_data)} obiektów.")
 
     def on_download_finished(self, features_data):
         # features_data is a list of dicts, or empty list on failure
@@ -1049,12 +1113,20 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def create_layer(self, features_data):
         if not features_data:
             return
+        
+        unique_field = 'ID_DZIALKI'
+        existing_ids = set()
 
         # Check if layer "Dzialki" already exists
         layers = QgsProject.instance().mapLayersByName("Dzialki")
         if layers:
             vl = layers[0]
             pr = vl.dataProvider()
+            
+            idx = vl.fields().indexOf(unique_field)
+            if idx != -1:
+                # Pobieramy tylko wartości z jednej kolumny dla szybkości
+                existing_ids = set(f.attribute(unique_field) for f in vl.getFeatures())
         else:
             # Create memory layer
             vl = QgsVectorLayer("Polygon?crs=epsg:2180", "Dzialki", "memory")
@@ -1075,15 +1147,22 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         qgs_features = []
         for fd in features_data:
+            feat_id = fd['attrs'].get(unique_field)
+            if feat_id in existing_ids:
+                continue
+
             feat = QgsFeature()
             feat.setFields(vl.fields())
             feat.setGeometry(QgsGeometry.fromWkt(fd['geom']))
             feat.setAttributes([fd['attrs'].get(f.name()) for f in vl.fields()])
             qgs_features.append(feat)
+
+            existing_ids.add(feat_id)
             
-        pr.addFeatures(qgs_features)
-        vl.updateExtents()
-        vl.triggerRepaint()
+        if qgs_features:
+            pr.addFeatures(qgs_features)
+            vl.updateExtents()
+            vl.triggerRepaint()
 
     def cancel_download(self):
         self.download_stopped = True

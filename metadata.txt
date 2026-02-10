@@ -4,15 +4,16 @@
 
 [general]
 name=Pobierz dane GUGiK
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.22
+qgisMaximiumVersion=3.99
 description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB
-version=1.0.0
+version=1.0
 author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
 email=uslugi.iip@gugik.gov.pl
 
 about=Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii.
 
-tracker=http://bugs
+tracker=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK/issues
 repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
 
 # End of mandatory metadata
@@ -22,7 +23,7 @@ repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog=
-    1.0.0 Pierwsze publiczne wydanie wtyczki
+    1.0 Pierwsze publiczne wydanie wtyczki
           - Dodano możliwość pobierania działek po przez:
 		* Wybranie obszaru administracyjnego (województwa, powiaty, gminy, obręby)
 			> W Przypadku województw i powiatów sugerowane jest pobieranie paczek z modułu Pobierz dane w geoportalu krajowym (https://mapy.geoportal.gov.pl/imapnext/imap/index.html?moduleId=modulPD)

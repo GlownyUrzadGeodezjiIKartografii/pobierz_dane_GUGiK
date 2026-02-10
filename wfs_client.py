@@ -268,6 +268,69 @@ class WFSClient:
         except Exception as e:
             QgsMessageLog.logMessage(f"[WFS] Error creating spatial filter: {e}", "PobieranieEGIB", Qgis.Warning)
             raise ValueError(f"Invalid WKT for spatial filter: {e}")
+        
+    def build_spatial_filter2(self, wkt_polygon, use_bbox=True):
+            """
+            Builds a spatial filter for WFS.
+            """
+            try:
+                geom = QgsGeometry.fromWkt(wkt_polygon)
+                if geom is None or geom.isEmpty():
+                    raise ValueError(f"Invalid WKT geometry: {wkt_polygon}")
+
+                if use_bbox:
+                    bbox = geom.boundingBox()
+                    xmin, ymin, xmax, ymax = bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()
+                    xmin, ymin, xmax, ymax = round(xmin, 2), round(ymin, 2), round(xmax, 2), round(ymax, 2)
+                    filter_xml = f'<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0"><fes:BBOX><fes:ValueReference>geom</fes:ValueReference><gml:Envelope srsName="EPSG:2180"><gml:lowerCorner>{ymin} {xmin}</gml:lowerCorner><gml:upperCorner>{ymax} {xmax}</gml:upperCorner></gml:Envelope></fes:BBOX></fes:Filter>'
+                else:
+                    if geom.wkbType() in [QgsWkbTypes.Polygon, QgsWkbTypes.MultiPolygon]:
+                        # MultiPolygon support
+                        if geom.isMultipart():
+                            # For WFS 2.0.0 Intersects, we might need to handle each part or use MultiPolygon GML.
+                            # Simple approach: use the first polygon for Intersects if too complex, or rely on BBOX.
+                            # Actually GUGiK supports MultiPolygon in GML.
+                            pass
+                        
+                        # Simpler fallback: for precise spatial, we take the exterior ring of the first part.
+                        poly = geom.asPolygon()
+                        if not poly:
+                            # Maybe MultiPolygon
+                            polys = geom.asMultiPolygon()
+                            if polys:
+                                poly = polys[0]
+                        
+                        if poly:
+                            exterior = poly[0]
+                            # coords = [f"{pt.x()} {pt.y()}" for pt in exterior]
+                            coords = [f"{pt.y()} {pt.x()}" for pt in exterior]
+                            if coords[0] != coords[-1]:
+                                coords.append(coords[0])
+                            pos_list = " ".join(coords)
+                            filter_xml = f'''<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0" xmlns:gml="http://www.opengis.net/gml/3.2">
+    <fes:Intersects>
+    <fes:ValueReference>geom</fes:ValueReference>
+    <gml:Polygon gml:id="polygon_filter" srsName="EPSG:2180">
+    <gml:exterior>
+    <gml:LinearRing>
+    <gml:posList srsDimension="2">{pos_list}</gml:posList>
+    </gml:LinearRing>
+    </gml:exterior>
+    </gml:Polygon>
+    </fes:Intersects>
+    </fes:Filter>'''
+                        else:
+                            raise ValueError("Could not extract polygon exterior ring")
+                    else:
+                        bbox = geom.boundingBox()
+                        xmin, ymin, xmax, ymax = bbox.xMinimum(), bbox.yMinimum(), bbox.xMaximum(), bbox.yMaximum()
+                        xmin, ymin, xmax, ymax = round(xmin, 2), round(ymin, 2), round(xmax, 2), round(ymax, 2)
+                        filter_xml = f'<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0"><fes:BBOX><fes:ValueReference>geom</fes:ValueReference><gml:Envelope srsName="EPSG:2180"><gml:lowerCorner>{ymin} {xmin}</gml:lowerCorner><gml:upperCorner>{ymax} {xmax}</gml:upperCorner></gml:Envelope></fes:BBOX></fes:Filter>'
+
+                return filter_xml
+            except Exception as e:
+                QgsMessageLog.logMessage(f"[WFS] Error creating spatial filter: {e}", "PobieranieEGIB", Qgis.Warning)
+                raise ValueError(f"Invalid WKT for spatial filter: {e}")
 
     def build_id_filter(self, ids):
         """
