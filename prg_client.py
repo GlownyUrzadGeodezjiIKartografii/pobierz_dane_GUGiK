@@ -53,6 +53,7 @@ class PRGClient:
         # Obręb: "WWPPGG_R.OOOO" (e.g. "141201_1.0001")
         elif '.' in teryt:
             feature_type = 'ms:A06_Granice_obrebow_ewidencyjnych'
+            # feature_type = 'ms:A03_Granice_gmin'
             
         else:
             # Fallback heuristics
@@ -63,7 +64,12 @@ class PRGClient:
 
         QgsMessageLog.logMessage(f"[PRG] Pobieranie geometrii dla {teryt} z warstwy {feature_type}", "PobieranieEGIB", Qgis.Info)
 
+
         geom = self._fetch_geometry(feature_type, filter_property, teryt)
+        if geom is None or geom.isEmpty():
+            QgsMessageLog.logMessage(f"[PRG] Próba pobierania z innej warstwy", "PobieranieEGIB", Qgis.Info)
+            if feature_type.startswith("ms:A05"):
+                geom = self._fetch_geometry('ms:A03_Granice_gmin', filter_property, teryt.replace("_", ""))
         return geom
 
     def _fetch_geometry(self, feature_type, property_name, value):
@@ -103,6 +109,7 @@ class PRGClient:
             return self._parse_geometry(response.text)
 
         except Exception as e:
+
             QgsMessageLog.logMessage(f"[PRG] Błąd pobierania geometrii: {e}", "PobieranieEGIB", Qgis.Warning)
             return None
 
