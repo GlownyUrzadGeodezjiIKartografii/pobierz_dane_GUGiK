@@ -7,12 +7,11 @@ name=Pobierz dane GUGiK
 qgisMinimumVersion=3.22
 qgisMaximiumVersion=3.99
 description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB. Plugin for downloading features from the EGiB collective WFS service.
-version=1.0.6
+version=1.0.7
 author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
 email=uslugi.iip@gugik.gov.pl
 
-about=Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii.
-The plugin is used to download objects from aggregate WFS services provided by the Head Office of Geodesy and Cartography.
+about=Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii. The plugin is used to download objects from aggregate WFS services provided by the Head Office of Geodesy and Cartography.
 
 tracker=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK/issues
 repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK

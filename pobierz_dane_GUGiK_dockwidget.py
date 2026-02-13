@@ -213,8 +213,8 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def init_settings_ui(self):
         """Initialize settings tab and load attributes list."""
         self.attributes_all = [
-            'id_dzialki', 'numer_dzialki', 'obreb', 'gmina', 'powiat', 'wojewodztwo',
-            'pole_powierzchni', 'grupa_rejestrowa', 'data_publikacji', 'status_dzialki'
+            'id_dzialki', 'numer_dzialki', 'numer_obrebu', 'numer_jednostki', 'nazwa_obrebu', 'nazwa_gminy',
+            'pole_powierzchni', 'grupa_rejestrowa', 'data', 'klasouzytki_egib'
         ]
         for attr in self.attributes_all:
             item = QListWidgetItem(attr)
