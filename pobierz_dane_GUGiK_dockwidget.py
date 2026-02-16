@@ -491,7 +491,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.cmb_pow.addItem("Brak", None)
             for teryt, p in sorted(self.powiaty.items(), key=lambda x: x[1]['nazwa']):
                 if p['parent'] == woj_id:
-                    self.cmb_pow.addItem(p['nazwa'], teryt)
+                    self.cmb_pow.addItem(f"{p['nazwa']} ({teryt})", teryt)
         elif woj_id == "":
             self.txt_teryt_manual.setText("")
         else:
@@ -524,7 +524,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.cmb_gmina.addItem("Brak", None)
         for teryt, g in sorted(self.gminy.items(), key=lambda x: x[1]['nazwa']):
             if g['parent'] == pow_id:
-                self.cmb_gmina.addItem(g['nazwa'], teryt)
+                self.cmb_gmina.addItem(f"{g['nazwa']} ({teryt})", teryt)
 
     def update_teryt_from_gmina(self):
         gmina_id = self.cmb_gmina.currentData()
