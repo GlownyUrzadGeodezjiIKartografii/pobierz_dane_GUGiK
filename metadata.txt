@@ -7,7 +7,7 @@ name=Pobierz dane GUGiK
 qgisMinimumVersion=3.22
 qgisMaximiumVersion=3.99
 description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB. Plugin for downloading features from the EGiB collective WFS service.
-version=1.0.8
+version=1.1.2
 author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
 email=uslugi.iip@gugik.gov.pl
 
@@ -23,6 +23,14 @@ repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog=
+	1.1
+	Dodano:
+		- obsługę pobierania budynków (EGIB), dzialek (RCN), budynków (RCN), lokali(RCN)
+		- nowa metoda pobieranie danych z OPENDATA w przypadku całej polski, województwa
+		- wybór metody pobierania pomiedzy opendata i wfs dla powiatu
+		- poprawa obłsugi enklaw w obiektach PRG
+	Poprawiono:
+		- działenie wtyczki dla wersji QGIS z biblioteką urllib3 < 1.26.0
     1.0 Pierwsze publiczne wydanie wtyczki
           - Dodano możliwość pobierania działek po przez:
 		* Wybranie obszaru administracyjnego (województwa, powiaty, gminy, obręby)

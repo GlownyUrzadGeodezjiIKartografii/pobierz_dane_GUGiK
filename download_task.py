@@ -3,7 +3,9 @@ from qgis.core import QgsFeature, QgsField, QgsFields, QgsWkbTypes
 from qgis.PyQt.QtCore import QVariant, pyqtSignal
 from qgis.PyQt.QtXml import QDomDocument, QDomNode
 import xml.etree.ElementTree as ET
-from .wfs_client import WFSClient
+from .egib_client_dzialki import WFSClient
+from .egib_client_budynki import EGIBClientBudynki
+from .rcn_client import RCNClient
 
 class CheckHitsTask(QgsTask):
     """
@@ -39,10 +41,16 @@ class DownloadTask(QgsTask):
     downloadFinished = pyqtSignal(list)
     progressValue = pyqtSignal(float)
 
-    def __init__(self, filter_xml, total_expected=0, attributes=None):
+    def __init__(self, filter_xml, total_expected=0, attributes=None, data_type="dzialki (EGIB)"):
         super().__init__("Pobieranie danych EGiB...", QgsTask.CanCancel)
         self.filter_xml = filter_xml
-        self.client = WFSClient()
+
+        if data_type == "budynki (EGIB)":
+            self.client = EGIBClientBudynki()
+        elif "(RCN)" in data_type:
+            self.client = RCNClient(obj_layer=data_type.split(" ")[0])
+        else:
+            self.client = WFSClient()
         self.total_expected = total_expected
         self.attributes = attributes
         self.features_data = [] # List of dicts: {'geom': wkt, 'attrs': {...}}
@@ -89,8 +97,37 @@ class DownloadTask(QgsTask):
 
     def _manual_parse_geometry(self, gml_element):
         try:
-            all_rings = []
 
+            local_name = gml_element.localName()
+
+            # --- 1. OBSŁUGA GEOMETRII PUNKTOWEJ (Point) ---
+            if local_name == "Point":
+                pos_node = None
+                child = gml_element.firstChild()
+                
+                # Szukamy węzła ze współrzędnymi
+                while not child.isNull():
+                    if child.toElement().localName() in ["pos", "coordinates"]:
+                        pos_node = child.toElement()
+                        break
+                    child = child.nextSibling()
+                
+                if pos_node:
+                    coords_text = pos_node.text().strip()
+                    # Zabezpieczenie dla różnych standardów (spacja dla 'pos', przecinek dla 'coordinates')
+                    coords = coords_text.replace(',', ' ').split() 
+                    
+                    if len(coords) >= 2:
+                        # Pamiętaj o kolejności współrzędnych!
+                        # EGiB często zwraca Y X (Lat, Lon), więc przypisujemy: float(coords[1]), float(coords[0])
+                        return QgsGeometry.fromPointXY(QgsPointXY(float(coords[1]), float(coords[0])))
+                
+                return None
+
+
+
+            all_rings = []
+            # --- 2. OBSŁUGA GEOMETRII POLIGONOWEJ (Polygon) ---
             # Funkcja pomocnicza do wyciągania punktów z dowolnego węzła (exterior/interior)
             def extract_points_from_ring_node(parent_node):
                 ring = None
@@ -183,7 +220,7 @@ class DownloadTask(QgsTask):
                         if not name:
                             name = elem.tagName().split(':')[-1]
                         
-                        if name == 'geom':
+                        if name in ['geom', 'msGeometry', 'geometry']:
                             geom_child = elem.firstChild()
                             while not geom_child.isNull():
                                 if geom_child.nodeType() == QDomNode.ElementNode:

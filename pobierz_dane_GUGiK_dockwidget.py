@@ -3,7 +3,7 @@ import os
 import json
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal, Qt, QVariant, QSettings
-from qgis.PyQt.QtWidgets import QMessageBox, QCompleter, QListWidgetItem
+from qgis.PyQt.QtWidgets import QMessageBox, QCompleter, QListWidgetItem, QFileDialog
 from qgis.core import (
     QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry,
     QgsField, QgsFields, QgsWkbTypes, QgsCoordinateTransform,
@@ -13,9 +13,16 @@ from qgis.core import (
 from qgis.PyQt.QtGui import QColor
 from qgis.gui import QgsMapToolEmitPoint, QgsRubberBand, QgsMapLayerComboBox
 
-from .wfs_client import WFSClient
+import requests
+import zipfile
+
+from .egib_client_dzialki import WFSClient
+from .egib_client_budynki import EGIBClientBudynki
+from .rcn_client import RCNClient
+from .geoparquet_download_task import GeoparquetDownloadTask
 from .download_task import CheckHitsTask, DownloadTask
 from .prg_client import PRGClient
+
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'pobierz_dane_GUGiK_dockwidget_base.ui'))
@@ -32,6 +39,7 @@ class RectangleMapTool(QgsMapToolEmitPoint):
         self.rubberBand.setWidth(2)
         self.startPoint = None
         self.isEmittingPoint = False
+       
 
     def canvasPressEvent(self, e):
         self.startPoint = self.toMapCoordinates(e.pos())
@@ -89,6 +97,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.load_data()
         self.connect_signals()
         self.local_filter_geom = None
+        self.running_tasks = []
 
         # Add checkbox for precise spatial filtering to admin tab
         if hasattr(self, 'tab_admin'):
@@ -119,6 +128,9 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         if hasattr(self, 'tabWidget'):
             from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout
 
+            self.btn_search_obreb_nr.clicked.connect(self.run_precise_search)
+
+            '''
             self.tab_precise = QWidget()
             self.tab_precise.setObjectName("tab_precise")
 
@@ -156,6 +168,8 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             else:
                 # Jeśli z jakiegoś powodu nie znaleziono tab_settings, dodaj na koniec
                 self.tabWidget.addTab(self.tab_precise, "Obręb + nr działki")
+
+            '''
 
         # Add layer selection and download button to map tab
         if hasattr(self, 'tab_map'):
@@ -218,7 +232,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         ]
         for attr in self.attributes_all:
             item = QListWidgetItem(attr)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
             self.list_attributes.addItem(item)
             
     def setup_completer(self):
@@ -239,8 +253,8 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 self.name_to_teryt[f"{data['nazwa']} (obręb {t})"] = t
 
         self.completer = QCompleter(self.name_to_teryt.keys(), self)
-        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.completer.setFilterMode(Qt.MatchContains)
+        self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchFlag.MatchContains)
         self.txt_teryt_manual.setCompleter(self.completer)
         
         self.completer.activated.connect(self.on_completer_activated)
@@ -353,7 +367,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                             count += 1
 
                     self.cmb_woj.addItem("- Wybierz -", None)
-                    self.cmb_woj.addItem("Cała Polska", "")
+                    self.cmb_woj.addItem("Cała Polska (0)", "")
                     for teryt_str, w in sorted(self.wojewodztwa.items(), key=lambda x: x[1]['nazwa']):
                         self.cmb_woj.addItem(f"{w['nazwa']} ({teryt_str})", teryt_str)
                     QgsMessageLog.logMessage(f"Załadowano {count} województw.", "PobieranieEGIB", Qgis.Info)
@@ -469,6 +483,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.cmb_pow.currentIndexChanged.connect(self.update_teryt_from_pow)
         self.cmb_gmina.currentIndexChanged.connect(self.update_teryt_from_gmina)
         self.cmb_obreb.currentIndexChanged.connect(self.update_teryt_from_obreb)
+        self.cmbObjType.currentIndexChanged.connect(self.update_ui_from_type)
 
         self.btn_download_admin.clicked.connect(self.run_admin_download)
         self.btn_download_ids.clicked.connect(self.run_id_download)
@@ -485,6 +500,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.cmb_pow.setEnabled(True)
         self.cmb_pow.addItem("- Wybierz -", None)
 
+
         if woj_id:
             self.txt_teryt_manual.setText(str(woj_id))
 
@@ -493,7 +509,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if p['parent'] == woj_id:
                     self.cmb_pow.addItem(f"{p['nazwa']} ({teryt})", teryt)
         elif woj_id == "":
-            self.txt_teryt_manual.setText("")
+            self.txt_teryt_manual.setText("0")
         else:
             self.txt_teryt_manual.clear()
 
@@ -598,6 +614,29 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                         else:
                             self.txt_teryt_manual.clear()
 
+    def update_ui_from_type(self):
+
+        wybrany_tekst = self.cmbObjType.currentText()
+        index = self.tabWidget.indexOf(self.tab_id) # self.tabWidget.indexOf(self.tab_precise)
+
+        if wybrany_tekst == "dzialki (EGIB)":
+            if index == -1:  # Jeśli nie ma jej w TabWidget, dodaj ją
+                self.tabWidget.insertTab(1, self.tab_id, "Identyfikator / Plik")
+        
+        else:
+            if index!= -1: self.tabWidget.removeTab(index)
+            # self.tabWidget.addTab(self.tab_settings, "Ustawienia")
+
+        index = self.tabWidget.indexOf(self.tab_precise)
+
+        if wybrany_tekst == "dzialki (EGIB)":
+            if index == -1:  # Jeśli nie ma jej w TabWidget, dodaj ją
+                self.tabWidget.insertTab(1, self.tab_precise, "Obręb + nr działki")
+        
+        else:
+            if index!= -1: self.tabWidget.removeTab(index)
+            # self.tabWidget.addTab(self.tab_settings, "Ustawienia")
+
     def toggle_map_tool(self):
         if self.btn_select_rect.isChecked():
             self.map_tool = RectangleMapTool(self.canvas, self.on_rect_selected)
@@ -689,7 +728,26 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         QgsMessageLog.logMessage(f"[UI] Dodano warstwę z granicą PRG dla {manual_text}", "PobieranieEGIB", Qgis.Info)
 
     def run_admin_download(self):
-        client = WFSClient()
+
+        obj_type = self.cmbObjType.currentText()
+
+        obj_layer = None
+        
+        if obj_type == "budynki (EGIB)":
+            client = EGIBClientBudynki()
+            attr_filter_value = "id_budynku"
+        elif "(RCN)" in obj_type:
+            obj_layer=obj_type.split(" ")[0]
+            client = RCNClient(obj_layer=obj_layer)
+            if obj_layer == "dzialki":
+                attr_filter_value = "dzi_id_dzialki"
+            elif obj_layer == "budynki":
+                attr_filter_value = "bud_id_budynku"
+            else:
+                attr_filter_value = "lok_id_lokalu"
+        else:
+            client = WFSClient()
+            attr_filter_value = "id_dzialki"
         filter_xml = None
 
         manual_text = self.txt_teryt_manual.text().strip()
@@ -700,11 +758,43 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         manual_text = manual_text.split(" ")[-1].replace(")", "") if "(" in manual_text else manual_text
 
         QgsMessageLog.logMessage(
-            f"[UI] Pobieranie działek dla TERYT: {manual_text}",
+            f"[UI] Pobieranie {obj_type} dla TERYT: {manual_text}",
             "PobieranieEGIB", Qgis.Info
         )
 
         # Pobierz geometrię jednostki administracyjnej z PRG
+
+        if len(manual_text) < 4:
+            try:
+                self.run_geoparquet_download(manual_text, obj_type)
+            except Exception as e:
+                self.show_error(f"Błąd podczas pobierania {obj_type}: {e}")
+                return
+            finally:
+                return
+            
+        # 2. Powiaty (4 cyfry) -> Zapytaj użytkownika
+        elif len(manual_text) == 4:
+            msg_box = QMessageBox(self.iface.mainWindow())
+            msg_box.setWindowTitle("Wybór metody pobierania")
+            msg_box.setText(f"Wybrano powiat (TERYT: {manual_text}).\nKtórą metodą chcesz pobrać dane?")
+            
+            # Dodajemy własne przyciski
+            parquet_btn = msg_box.addButton("GeoParquet (zapis pliku na dysku)", QMessageBox.ButtonRole.ActionRole)
+            wfs_btn = msg_box.addButton("WFS (warstwa tymczasowa)", QMessageBox.ButtonRole.ActionRole)
+            cancel_btn = msg_box.addButton("Anuluj", QMessageBox.ButtonRole.RejectRole)
+            
+            msg_box.exec()
+            
+            if msg_box.clickedButton() == parquet_btn:
+                self.run_geoparquet_download(manual_text, obj_type)
+                return
+            elif msg_box.clickedButton() == cancel_btn:
+                return
+            # Jeśli kliknięto wfs_btn, kod idzie dalej do logiki WFS
+
+
+        
         try:
             geom = self.prg_client.get_boundary_geometry(manual_text)
         except Exception as e:
@@ -735,17 +825,75 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         )
         
         # Zbuduj filtr atrybutowy (początek id_dzialki musi się zgadzać z TERYT)
-        attr_filter = client.build_attribute_filter('id_dzialki', manual_text, like=True)
-        
+        attr_filter = client.build_attribute_filter(attr_filter_value, manual_text, like=True)
+            
         # Połącz filtry: Przestrzenny AND Atrybutowy
         combined_filter = client.combine_filters([filter_xml, attr_filter])
 
+
         # Get selected attributes
         attributes = [self.list_attributes.item(i).text() for i in range(self.list_attributes.count()) 
-                      if self.list_attributes.item(i).checkState() == Qt.Checked]
+                      if self.list_attributes.item(i).checkState() == Qt.CheckState.Checked]
         if len(attributes) == self.list_attributes.count(): attributes = None
 
         self.start_download_direct(combined_filter, attributes=attributes)
+
+    def run_geoparquet_download(self, teryt, obj_type):
+
+        ext = ""
+
+        baza = obj_type.split(" ")[-1]
+
+        if len(teryt) < 4:
+            file_type = "parquet"
+            obj_type_clean = "_" + obj_type.split(" ")[0]
+        else:
+            file_type = "gpkg"
+            ext = ".zip"
+            obj_type_clean = ""
+
+
+        if baza == "(EGIB)":
+            url = f"https://opendata.geoportal.gov.pl/InneDane/latest_exports/eziudp_wfs/{file_type.upper()}/{teryt}{obj_type_clean}.{file_type}{ext}"
+        elif baza == "(RCN)":
+            url = f"https://opendata.geoportal.gov.pl/InneDane/latest_exports/rcn_transakcje_ceny/{file_type.upper()}/{teryt}_transakcje_ceny{obj_type_clean}.{file_type}{ext}"
+
+        # 1. Wybór lokalizacji zapisu (musi być w wątku głównym)
+        default_name = f"{teryt}{obj_type_clean}.{file_type}{ext}"
+        path, _ = QFileDialog.getSaveFileName(
+            self.iface.mainWindow(),
+            f"Wybierz miejsce zapisu pliku {file_type}",
+            default_name,
+            f"{file_type} Files (*.{file_type}{ext})"
+        )
+
+        if not path:
+            return
+
+        # 2. Tworzenie zadania (Task)
+        desc = f"Pobieranie {file_type}: {obj_type_clean} ({teryt})"
+        task = GeoparquetDownloadTask(desc, url, path, obj_type_clean)
+
+        # WAŻNE: Dodaj zadanie do listy, aby Python go nie usunął!
+        self.running_tasks.append(task)
+
+        # 3. Połączenie paska postępu z zadaniem
+        # Zadanie będzie automatycznie raportować postęp przez sygnał progressChanged
+        task.progressChanged.connect(lambda p: self.progressBar.setValue(int(p)))
+        
+        # Opcjonalnie: pokazanie/ukrycie paska
+        self.progressBar.setVisible(True)
+        task.begun.connect(lambda: self.progressBar.setVisible(True))
+        task.taskCompleted.connect(lambda: self.progressBar.setVisible(False))
+        task.taskTerminated.connect(lambda: self.progressBar.setVisible(False))
+        task.downloadFinished.connect(self.on_download_finished_gp)
+        task.taskCompleted.connect(lambda: self.running_tasks.remove(task))
+        task.taskTerminated.connect(lambda: self.running_tasks.remove(task))
+
+        # 4. Dodanie zadania do menedżera QGIS
+        QgsApplication.taskManager().addTask(task)
+        
+        self.iface.messageBar().pushMessage("Zadanie uruchomione", "Pobieranie odbywa się w tle...", level=Qgis.Info)
 
     def run_id_download(self):
         ids_text = self.txt_ids.toPlainText()
@@ -757,7 +905,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         client = WFSClient()
         
         attributes = [self.list_attributes.item(i).text() for i in range(self.list_attributes.count()) 
-                      if self.list_attributes.item(i).checkState() == Qt.Checked]
+                      if self.list_attributes.item(i).checkState() == Qt.CheckState.Checked]
         if len(attributes) == self.list_attributes.count(): attributes = None
 
         # Batching by 10
@@ -868,7 +1016,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             reply = QMessageBox.question(
                 self, "Potwierdzenie",
                 f"Warstwa zawiera {feature_count} obiektów. Może to zająć dużo czasu. Czy kontynuować?",
-                QMessageBox.Yes | QMessageBox.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.No:
                 return
@@ -893,7 +1041,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         local_filter_geom = None
 
         attributes = [self.list_attributes.item(i).text() for i in range(self.list_attributes.count()) 
-                if self.list_attributes.item(i).checkState() == Qt.Checked]
+                if self.list_attributes.item(i).checkState() == Qt.CheckState.Checked]
         if len(attributes) == self.list_attributes.count(): attributes = None
 
         for feat in layer.getFeatures():
@@ -1010,7 +1158,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         reply = QMessageBox.question(
             self, "Potwierdzenie",
             "Rozpoczynamy pobieranie danych.\n\nPobieranie może zająć dużo czasu w zależności od ilości danych.\n\nMożesz przerwać w dowolnym momencie.",
-            QMessageBox.Yes | QMessageBox.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.No:
             return
@@ -1030,7 +1178,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             return
 
         attributes = [self.list_attributes.item(i).text() for i in range(self.list_attributes.count()) 
-                      if self.list_attributes.item(i).checkState() == Qt.Checked]
+                      if self.list_attributes.item(i).checkState() == Qt.CheckState.Checked]
         if len(attributes) == self.list_attributes.count(): attributes = None
 
         limit = 5000
@@ -1038,7 +1186,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             reply = QMessageBox.question(
                 self, "Potwierdzenie",
                 f"Zapytanie może zwróć około {hits} obiektów.\n\nCzy kontynuować?",
-                QMessageBox.Yes | QMessageBox.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.No:
                 self.reset_ui()
@@ -1050,7 +1198,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.progressBar.setRange(0, 100)
         self.btn_cancel.setVisible(True)
 
-        self.download_task = DownloadTask(filter_xml, total_expected=total, attributes=attributes)
+        self.download_task = DownloadTask(filter_xml, total_expected=total, attributes=attributes, data_type=self.cmbObjType.currentText())
 
         
         if local_filter_geom:
@@ -1061,6 +1209,119 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.download_task.downloadFinished.connect(self.on_download_finished)
         self.download_task.progressValue.connect(lambda val: self.progressBar.setValue(int(val)))
         QgsApplication.taskManager().addTask(self.download_task)
+
+    def on_download_finished_gp(self, path):
+        # self.show_info("!!!")
+        # features_data is a list of dicts, or empty list on failure
+
+        if not path: # Jeśli ścieżka jest pusta (błąd/anulowanie), przerwij
+            self.reset_ui()
+            return
+
+        if path.lower().endswith(".zip"):
+            QgsMessageLog.logMessage(f"{path}", "PobieranieEGIB", Qgis.Critical)
+            try:
+                QgsMessageLog.logMessage("Rozpakowywanie archiwum...", "PobieranieEGIB", Qgis.Info)
+                
+                folder = os.path.dirname(path)
+                with zipfile.ZipFile(path, 'r') as zip_ref:
+                    # Pobieramy listę plików i szukamy pierwszego .parquet
+                    gpkg_files = [f for f in zip_ref.namelist() if f.lower().endswith('.gpkg')]
+                    
+                    if not gpkg_files:
+                        QgsMessageLog.logMessage("BŁĄD: Wewnątrz ZIP nie znaleziono pliku GPKG!", "PobieranieEGIB", Qgis.Critical)
+                        return
+
+                    # Rozpakuj wszystko do folderu, gdzie jest ZIP
+                    zip_ref.extractall(folder)
+                    
+                    # Ścieżka do wypakowanego pliku
+                    final_gpkg_path = os.path.join(folder, gpkg_files[0])
+                    QgsMessageLog.logMessage(f"Rozpakowano: {gpkg_files[0]}", "PobieranieEGIB", Qgis.Success)
+                    
+            except Exception as e:
+                QgsMessageLog.logMessage(f"Błąd podczas rozpakowywania: {str(e)}", "PobieranieEGIB", Qgis.Critical)
+                return
+            
+            os.remove(path)
+            path = final_gpkg_path
+
+        if path.lower().endswith(".gpkg"):
+            # Tworzymy tymczasową warstwę, żeby „przeskanować” zawartość pliku
+            temp_layer = QgsVectorLayer(path, "temp", "ogr")
+
+            if not temp_layer.isValid():
+                QgsMessageLog.logMessage(f"Nieprawidłowy plik GPKG: {path}", "PobieranieEGIB", Qgis.Critical)
+                return
+            
+            sublayers = temp_layer.dataProvider().subLayers()
+
+            if sublayers:
+                QgsMessageLog.logMessage(f"Znaleziono warstwy: {len(sublayers)}", "PobieranieEGIB", Qgis.Info)
+            
+            if len(sublayers) > 1:
+                QgsMessageLog.logMessage(f"Wykryto {len(sublayers)} warstw w GPKG. Wczytywanie wszystkich...", "PobieranieEGIB", Qgis.Info)
+                
+                for sub in sublayers:
+                    QgsMessageLog.logMessage(f"Analizuję warstwę: {sub}", "PobieranieEGIB", Qgis.Info)
+                    # 'sub' ma format "index:nazwa_warstwy:liczba_obiektów:typ_geometrii"
+                    parts = sub.split('!!::!!')
+                    layer_name = ""
+
+                    if len(parts) >= 2 and parts[1].strip():
+                        layer_name = parts[1] # Standard: "0:nazwa:..."
+                    else:
+                        # Fallback jeśli separator by się zmienił
+                        layer_name = sub.split(':')[0].replace('!!', '')
+
+                    if not layer_name:
+                        continue
+
+                    # Konstruujemy URI wskazujące na konkretną warstwę
+                    uri = f"{path}|layername={layer_name}"
+                    vlayer = QgsVectorLayer(uri, layer_name, "ogr")
+
+                    trg_layer = layer_name
+                    if "_" in trg_layer:
+                        trg_layer = trg_layer.split("_")[-1].split(".")[0]
+
+                    if "transakcje" in layer_name: trg_layer += "_rcn"
+
+
+                    if self.chk_load_style.isChecked():
+                            style_path = os.path.join(os.path.dirname(__file__), 'data', f'{trg_layer.lower()}.qml')
+                            if os.path.exists(style_path):
+                                vlayer.loadNamedStyle(style_path)
+                    
+                    if vlayer.isValid():
+                        QgsProject.instance().addMapLayer(vlayer)
+                        QgsMessageLog.logMessage(f"Dodano warstwę: {layer_name}", "PobieranieEGIB", Qgis.Success)
+                    else:
+                        QgsMessageLog.logMessage(f"BŁĄD: Nie można wczytać warstwy {layer_name} z URI: {uri}", "PobieranieEGIB", Qgis.Critical)
+            else:
+                # Jeśli jest tylko jedna warstwa (lub subLayers zawiodło), wczytaj standardowo
+                self.add_single_layer(path)
+        else:
+            # Dla plików .parquet (które zazwyczaj mają jedną warstwę)
+            self.add_single_layer(path)
+
+    def add_single_layer(self, path):
+        """Pomocnicza funkcja do wczytywania pojedynczego pliku."""
+        layer_name = os.path.basename(path)
+        vlayer = QgsVectorLayer(path, layer_name, "ogr")
+
+        trg_layer = layer_name
+
+        if "_" in trg_layer:
+            trg_layer = trg_layer.split("_")[-1].split(".")[0]
+
+        if self.chk_load_style.isChecked():
+                style_path = os.path.join(os.path.dirname(__file__), 'data', f'{trg_layer.lower()}.qml')
+                if os.path.exists(style_path):
+                     vlayer.loadNamedStyle(style_path)
+
+        if vlayer.isValid():
+            QgsProject.instance().addMapLayer(vlayer)
 
     def on_download_finished_not_load(self, features_data):
         # self.show_info("!!!")
@@ -1113,12 +1374,33 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def create_layer(self, features_data):
         if not features_data:
             return
-        
-        unique_field = 'ID_DZIALKI'
         existing_ids = set()
 
+        trg_layer = "Dzialki"
+        unique_field = 'ID_DZIALKI'
+        geom_type = "Polygon"
+
+
+        if self.cmbObjType.currentText() == "budynki (EGIB)":
+            unique_field = 'ID_BUDYNKU'
+            trg_layer = "Budynki"
+        elif self.cmbObjType.currentText() == "dzialki (RCN)":
+            unique_field = 'tran_lokalny_id_iip'
+            trg_layer = "Dzialki_RCN"
+        elif self.cmbObjType.currentText() == "budynki (RCN)":
+            unique_field = 'tran_lokalny_id_iip'
+            trg_layer = "Budynki_RCN"
+        elif self.cmbObjType.currentText() == "lokale (RCN)":
+            unique_field = 'tran_lokalny_id_iip'
+            trg_layer = "Lokale_RCN"
+            geom_type = "Point"
+
+        # self.show_info(f"Current Objtype: {self.cmbObjType.currentText()}")
+
+        layers = QgsProject.instance().mapLayersByName(trg_layer)
+
         # Check if layer "Dzialki" already exists
-        layers = QgsProject.instance().mapLayersByName("Dzialki")
+        
         if layers:
             vl = layers[0]
             pr = vl.dataProvider()
@@ -1129,7 +1411,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 existing_ids = set(f.attribute(unique_field) for f in vl.getFeatures())
         else:
             # Create memory layer
-            vl = QgsVectorLayer("Polygon?crs=epsg:2180", "Dzialki", "memory")
+            vl = QgsVectorLayer(f"{geom_type}?crs=epsg:2180", trg_layer, "memory")
             pr = vl.dataProvider()
             
             # Define fields based on first feature
@@ -1139,7 +1421,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             vl.updateFields()
             
             if self.chk_load_style.isChecked():
-                style_path = os.path.join(os.path.dirname(__file__), 'data', 'dzialki.qml')
+                style_path = os.path.join(os.path.dirname(__file__), 'data', f'{trg_layer.lower()}.qml')
                 if os.path.exists(style_path):
                      vl.loadNamedStyle(style_path)
 
@@ -1197,9 +1479,23 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         obreb_teryt = None
 
+        obreb_name_corrected = obreb_name[0].upper() + obreb_name[1:].lower() 
+
         # Wyszukaj obręby po nazwie
         if obreb_name in self.obreby_by_name:
             obreb_teryt_list = self.obreby_by_name[obreb_name]
+
+            if len(obreb_teryt_list) == 1:
+                obreb_teryt = obreb_teryt_list[0]
+            else:
+                # Wiele obrębów o tej nazwie - zapytaj użytkownika
+                selected_obreb = self.select_obreb_from_duplicates(obreb_teryt_list)
+                if not selected_obreb:
+                    return
+                obreb_teryt = selected_obreb
+
+        elif obreb_name_corrected in self.obreby_by_name:
+            obreb_teryt_list = self.obreby_by_name[obreb_name_corrected]
 
             if len(obreb_teryt_list) == 1:
                 obreb_teryt = obreb_teryt_list[0]
@@ -1275,7 +1571,7 @@ class PobieranieEGIBDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         btn_ok.clicked.connect(on_ok)
         btn_cancel.clicked.connect(on_cancel)
 
-        if dialog.exec_() == QDialog.Accepted and selected_teryt:
+        if dialog.exec() == QDialog.Accepted and selected_teryt:
             return selected_teryt
         return None
 
