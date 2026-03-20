@@ -10,7 +10,7 @@ Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych
 - wybór metody pobierania pomiedzy opendata i wfs dla powiatu
 - poprawa obłsugi enklaw w obiektach PRG
 #### Poprawiono:
-- działenie wtyczki dla wersji QGIS z biblioteką urllib3 < 1.26.0
+- działanie wtyczki dla wersji QGIS z biblioteką urllib3 < 1.26.0
 ### 1.0 Pierwsze publiczne wydanie wtyczki
 #### Dodano możliwość pobierania działek po przez:
 - Wybranie obszaru administracyjnego (województwa, powiaty, gminy, obręby) - W Przypadku województw i powiatów sugerowane jest pobieranie paczek z modułu Pobierz dane w geoportalu krajowym (https://mapy.geoportal.gov.pl/imapnext/imap/index.html?moduleId=modulPD)
