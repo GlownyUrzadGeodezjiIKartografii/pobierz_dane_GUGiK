@@ -45,15 +45,15 @@ class GeoparquetDownloadTask(QgsTask):
     def finished(self, result):
         """Wywołuje się w głównym wątku po zakończeniu run()"""
         if result:
-            QgsMessageLog.logMessage(f"Pobieranie zakończone: {self.path}", "PobieranieEGIB", Qgis.Success)
+            QgsMessageLog.logMessage(f"Pobieranie zakończone: {self.path}", "PD_GUGiK", Qgis.MessageLevel.Success)
             # Wywołujemy funkcję wczytującą warstwę (musi być w wątku głównym)
             self.downloadFinished.emit(self.path)
             # self.load_layer()
         else:
             if self.isCanceled():
-                QgsMessageLog.logMessage("Pobieranie anulowane przez użytkownika.", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("Pobieranie anulowane przez użytkownika.", "PD_GUGiK", Qgis.MessageLevel.Warning)
             else:
-                QgsMessageLog.logMessage(f"Błąd pobierania: {self.exception}", "PobieranieEGIB", Qgis.Critical)
+                QgsMessageLog.logMessage(f"Błąd pobierania: {self.exception}", "PD_GUGiK", Qgis.MessageLevel.Critical)
             
             self.downloadFinished.emit('')
 
@@ -63,4 +63,4 @@ class GeoparquetDownloadTask(QgsTask):
         if vlayer.isValid():
             QgsProject.instance().addMapLayer(vlayer)
         else:
-            QgsMessageLog.logMessage("Nie udało się wczytać pliku Parquet po pobraniu.", "PobieranieEGIB", Qgis.Critical)
+            QgsMessageLog.logMessage("Nie udało się wczytać pliku Parquet po pobraniu.", "PD_GUGiK", Qgis.MessageLevel.Critical)

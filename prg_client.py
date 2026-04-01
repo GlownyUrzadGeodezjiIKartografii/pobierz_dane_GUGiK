@@ -5,7 +5,7 @@ Pobiera geometrię jednostek administracyjnych dla filtrowania działek EGiB
 """
 import requests
 from qgis.core import QgsMessageLog, Qgis, QgsGeometry, QgsCoordinateReferenceSystem, QgsOgcUtils, QgsPointXY
-from PyQt5.QtXml import QDomDocument, QDomNode
+from qgis.PyQt.QtXml import QDomDocument, QDomNode
 
 
 class PRGClient:
@@ -62,12 +62,12 @@ class PRGClient:
             else:
                  feature_type = 'ms:A06_Granice_obrebow_ewidencyjnych'
 
-        QgsMessageLog.logMessage(f"[PRG] Pobieranie geometrii dla {teryt} z warstwy {feature_type}", "PobieranieEGIB", Qgis.Info)
+        QgsMessageLog.logMessage(f"[PRG] Pobieranie geometrii dla {teryt} z warstwy {feature_type}", "PD_GUGiK", Qgis.MessageLevel.Info)
 
 
         geom = self._fetch_geometry(feature_type, filter_property, teryt)
         if geom is None or geom.isEmpty():
-            QgsMessageLog.logMessage(f"[PRG] Próba pobierania z innej warstwy", "PobieranieEGIB", Qgis.Info)
+            QgsMessageLog.logMessage(f"[PRG] Próba pobierania z innej warstwy", "PD_GUGiK", Qgis.MessageLevel.Info)
             if feature_type.startswith("ms:A05"):
                 geom = self._fetch_geometry('ms:A03_Granice_gmin', filter_property, teryt.replace("_", ""))
         return geom
@@ -98,19 +98,19 @@ class PRGClient:
         from requests import Request
         req = Request('GET', self.url, params=params)
         prepared_url = req.prepare().url
-        QgsMessageLog.logMessage(f"[PRG] Zapytanie URL: {prepared_url}", "PobieranieEGIB", Qgis.Info)
+        QgsMessageLog.logMessage(f"[PRG] Zapytanie URL: {prepared_url}", "PD_GUGiK", Qgis.MessageLevel.Info)
 
         try:
             response = self.session.get(self.url, params=params, timeout=60)
             response.raise_for_status()
 
-            QgsMessageLog.logMessage(f"[PRG] Odpowiedź: Status {response.status_code}, Size: {len(response.content)} bytes", "PobieranieEGIB", Qgis.Info)
+            QgsMessageLog.logMessage(f"[PRG] Odpowiedź: Status {response.status_code}, Size: {len(response.content)} bytes", "PD_GUGiK", Qgis.MessageLevel.Info)
 
             return self._parse_geometry(response.text)
 
         except Exception as e:
 
-            QgsMessageLog.logMessage(f"[PRG] Błąd pobierania geometrii: {e}", "PobieranieEGIB", Qgis.Warning)
+            QgsMessageLog.logMessage(f"[PRG] Błąd pobierania geometrii: {e}", "PD_GUGiK", Qgis.MessageLevel.Warning)
             return None
 
     def _manual_parse_geometry(self, gml_element):
@@ -125,7 +125,7 @@ class PRGClient:
                 def find_poslist(n):
                     nonlocal pos_list
                     if pos_list is not None: return
-                    if n.nodeType() == QDomNode.ElementNode and n.toElement().localName() == "posList":
+                    if n.nodeType() == QDomNode.NodeType.ElementNode and n.toElement().localName() == "posList":
                         pos_list = n.toElement()
                         return
                     c = n.firstChild()
@@ -161,7 +161,7 @@ class PRGClient:
             # Krok 1: Znajdź wszystkie węzły pojedynczych poligonów (Polygon, Surface, PolygonPatch itp.)
             polygons = []
             def find_polygons(n):
-                if n.nodeType() == QDomNode.ElementNode:
+                if n.nodeType() == QDomNode.NodeType.ElementNode:
                     # GML może używać Polygon lub Surface dla bloków wewnątrz MultiSurface
                     if n.toElement().localName() in ["Polygon", "Surface", "PolygonPatch"]:
                         polygons.append(n)
@@ -188,7 +188,7 @@ class PRGClient:
                 
                 child = poly_node.firstChild()
                 while not child.isNull():
-                    if child.nodeType() == QDomNode.ElementNode:
+                    if child.nodeType() == QDomNode.NodeType.ElementNode:
                         elem = child.toElement()
                         if elem.localName() == "exterior":
                             exterior_pts = get_points(elem)
@@ -209,7 +209,7 @@ class PRGClient:
                 return QgsGeometry.fromMultiPolygonXY(multi_polygon_rings)
 
         except Exception as e:
-            QgsMessageLog.logMessage(f"[PRG] Manual parsing exception: {e}", "PobieranieEGIB", Qgis.Warning)
+            QgsMessageLog.logMessage(f"[PRG] Manual parsing exception: {e}", "PD_GUGiK", Qgis.MessageLevel.Warning)
         
         return None
 
@@ -223,7 +223,7 @@ class PRGClient:
         try:
             doc = QDomDocument()
             if not doc.setContent(gml_content, True):
-                QgsMessageLog.logMessage("[PRG] Błąd parsowania XML (setContent)", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("[PRG] Błąd parsowania XML (setContent)", "PD_GUGiK", Qgis.MessageLevel.Warning)
                 return None
 
             root = doc.documentElement()
@@ -233,7 +233,7 @@ class PRGClient:
                 members = root.elementsByTagName('wfs:member')
 
             if members.count() == 0:
-                QgsMessageLog.logMessage("[PRG] Nie znaleziono wfs:member", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("[PRG] Nie znaleziono wfs:member", "PD_GUGiK", Qgis.MessageLevel.Warning)
                 return None
 
             member_node = members.item(0)
@@ -241,19 +241,19 @@ class PRGClient:
             feature_elem = None
             child = member_node.firstChild()
             while not child.isNull():
-                if child.nodeType() == QDomNode.ElementNode:
+                if child.nodeType() == QDomNode.NodeType.ElementNode:
                     feature_elem = child.toElement()
                     break
                 child = child.nextSibling()
 
             if feature_elem is None:
-                QgsMessageLog.logMessage("[PRG] Nie znaleziono elementu cechy w member", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("[PRG] Nie znaleziono elementu cechy w member", "PD_GUGiK", Qgis.MessageLevel.Warning)
                 return None
 
             geom_elem = None
             geom_prop = feature_elem.firstChild()
             while not geom_prop.isNull():
-                if geom_prop.nodeType() == QDomNode.ElementNode:
+                if geom_prop.nodeType() == QDomNode.NodeType.ElementNode:
                     elem = geom_prop.toElement()
                     
                     name = elem.localName()
@@ -263,7 +263,7 @@ class PRGClient:
                     if name == 'msGeometry':
                         geom_child = elem.firstChild()
                         while not geom_child.isNull():
-                            if geom_child.nodeType() == QDomNode.ElementNode:
+                            if geom_child.nodeType() == QDomNode.NodeType.ElementNode:
                                 geom_elem = geom_child.toElement()
                                 break
                             geom_child = geom_child.nextSibling()
@@ -271,23 +271,23 @@ class PRGClient:
                 geom_prop = geom_prop.nextSibling()
 
             if geom_elem is None:
-                QgsMessageLog.logMessage("[PRG] Nie znaleziono geometrii", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("[PRG] Nie znaleziono geometrii", "PD_GUGiK", Qgis.MessageLevel.Warning)
                 return None
 
             geom = QgsOgcUtils.geometryFromGML(geom_elem)
 
             if not geom or geom.isEmpty():
-                QgsMessageLog.logMessage("[PRG] QgsOgcUtils zwrócił pustą geometrię, próba ręcznego parsowania", "PobieranieEGIB", Qgis.Warning)
+                QgsMessageLog.logMessage("[PRG] QgsOgcUtils zwrócił pustą geometrię, próba ręcznego parsowania", "PD_GUGiK", Qgis.MessageLevel.Warning)
                 geom = self._manual_parse_geometry(geom_elem)
                 if geom and not geom.isEmpty():
-                    QgsMessageLog.logMessage(f"[PRG] Ręczne parsowanie udane {geom_elem}", "PobieranieEGIB", Qgis.Info)
+                    QgsMessageLog.logMessage(f"[PRG] Ręczne parsowanie udane {geom_elem}", "PD_GUGiK", Qgis.MessageLevel.Info)
                 else:
-                    QgsMessageLog.logMessage("[PRG] Ręczne parsowanie również nie powiodło się", "PobieranieEGIB", Qgis.Warning)
+                    QgsMessageLog.logMessage("[PRG] Ręczne parsowanie również nie powiodło się", "PD_GUGiK", Qgis.MessageLevel.Warning)
                     return None
 
             return geom
 
         except Exception as e:
-            QgsMessageLog.logMessage(f"[PRG] Błąd parsowania geometrii: {e}", "PobieranieEGIB", Qgis.Warning)
+            QgsMessageLog.logMessage(f"[PRG] Błąd parsowania geometrii: {e}", "PD_GUGiK", Qgis.MessageLevel.Warning)
             return None
     

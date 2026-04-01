@@ -23,16 +23,17 @@ Pobieranie danych GUGiK
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+# from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QAction
 # Initialize Qt resources from file resources.py
 from .resources import *
 
 # Import the code for the DockWidget
-from .pobierz_dane_GUGiK_dockwidget import PobieranieEGIBDockWidget
+from .pobierz_dane_GUGiK_dockwidget import PD_GUGiKDockWidget
 import os.path
 
 
-class PobieranieEGIB:
+class PD_GUGiK:
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -54,7 +55,7 @@ class PobieranieEGIB:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'PobieranieEGIB_{}.qm'.format(locale))
+            'PD_GUGiK_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -68,7 +69,7 @@ class PobieranieEGIB:
         self.toolbar = self.iface.addToolBar(u'PobieranieGUGiK')
         self.toolbar.setObjectName(u'PobieranieGUGiK')
 
-        #print "** INITIALIZING PobieranieEGIB"
+        #print "** INITIALIZING PD_GUGiK"
 
         self.pluginIsActive = False
         self.dockwidget = None
@@ -179,7 +180,7 @@ class PobieranieEGIB:
     def onClosePlugin(self):
         """Cleanup necessary items here when plugin dockwidget is closed"""
 
-        #print "** CLOSING PobieranieEGIB"
+        #print "** CLOSING PD_GUGiK"
 
         # disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
@@ -196,7 +197,7 @@ class PobieranieEGIB:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
 
-        #print "** UNLOAD PobieranieEGIB"
+        #print "** UNLOAD PD_GUGiK"
 
         for action in self.actions:
             self.iface.removePluginVectorMenu(
@@ -214,19 +215,19 @@ class PobieranieEGIB:
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
-            #print "** STARTING PobieranieEGIB"
+            #print "** STARTING PD_GUGiK"
 
             # dockwidget may not exist if:
             #    first run of plugin
             #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
-                self.dockwidget = PobieranieEGIBDockWidget()
+                self.dockwidget = PD_GUGiKDockWidget()
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 
             # show the dockwidget
             # TODO: fix to allow choice of dock location
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+            self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockwidget)
             self.dockwidget.show()

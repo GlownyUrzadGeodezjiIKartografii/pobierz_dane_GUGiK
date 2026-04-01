@@ -48,7 +48,7 @@ def test_parsing():
         feature_elem = None
         child = member_node.firstChild()
         while not child.isNull():
-            if child.nodeType() == QDomNode.ElementNode:
+            if child.nodeType() == QDomNode.NodeType.ElementNode:
                 feature_elem = child.toElement()
                 break
             child = child.nextSibling()
@@ -59,7 +59,7 @@ def test_parsing():
 
         prop = feature_elem.firstChild()
         while not prop.isNull():
-            if prop.nodeType() == QDomNode.ElementNode:
+            if prop.nodeType() == QDomNode.NodeType.ElementNode:
                 elem = prop.toElement()
                 name = elem.localName()
                 if not name:
@@ -70,7 +70,7 @@ def test_parsing():
                 if name == 'geom':
                     geom_child = elem.firstChild()
                     while not geom_child.isNull():
-                        if geom_child.nodeType() == QDomNode.ElementNode:
+                        if geom_child.nodeType() == QDomNode.NodeType.ElementNode:
                             g_elem = geom_child.toElement()
                             print(f"  Geom Child: {g_elem.tagName()}")
                             

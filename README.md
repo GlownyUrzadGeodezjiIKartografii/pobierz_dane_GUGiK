@@ -3,15 +3,9 @@
 Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii.
 
 ## Lista zmian
-### 	1.1
-#### Dodano:
-- obsługę pobierania budynków (EGIB), dzialek (RCN), budynków (RCN), lokali(RCN)
-- nowa metoda pobieranie danych z OPENDATA w przypadku całej polski, województwa
-- wybór metody pobierania pomiedzy opendata i wfs dla powiatu
-- poprawa obłsugi enklaw w obiektach PRG
-#### Poprawiono:
-- działanie wtyczki dla wersji QGIS z biblioteką urllib3 < 1.26.0
+
 ### 1.0 Pierwsze publiczne wydanie wtyczki
+
 #### Dodano możliwość pobierania działek po przez:
 - Wybranie obszaru administracyjnego (województwa, powiaty, gminy, obręby) - W Przypadku województw i powiatów sugerowane jest pobieranie paczek z modułu Pobierz dane w geoportalu krajowym (https://mapy.geoportal.gov.pl/imapnext/imap/index.html?moduleId=modulPD)
 - Identyfikator działki lub listę indentyfikatorów działek rozdzielonych znakiem nowej linii
@@ -19,6 +13,7 @@ Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych
 - Wskazanie warstwy poligonowej (powyżej 100 wierzchołków pojedynczego obiektu wykorzystywany jest zasięg obiektu)
 - Zakres aktualnego widoku mapy
 - Wskazanie nazwy obrębu oraz numeru działki
+
 ---
 
 [![GUGiK © 2026](https://www.geoportal.gov.pl/wp-content/themes/geoportal/assets/images/gugik-logo.png)](https://www.gov.pl/web/gugik)

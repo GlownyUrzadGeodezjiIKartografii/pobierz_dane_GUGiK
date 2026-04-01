@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PobieranieEGIBDockWidgetBase</class>
- <widget class="QDockWidget" name="PobieranieEGIBDockWidgetBase">
+ <class>PD_GUGiKDockWidgetBase</class>
+ <widget class="QDockWidget" name="PD_GUGiKDockWidgetBase">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -16,12 +16,12 @@
   <widget class="QWidget" name="dockWidgetContents">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
       <property name="topMargin">
        <number>0</number>
       </property>
       <item>
-       <spacer name="horizontalSpacer">
+       <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -44,6 +44,29 @@
          <string>Typ danych</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cmbCategory"/>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item>
        <widget class="QComboBox" name="cmbObjType">
@@ -79,7 +102,340 @@
           <string>lokale (RCN)</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>adresy (PRG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ulice (PRG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>place (PRG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O1_UrzedoweNazwyObiektowFizjograficznych (PRNG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O2_ZestandaryzowaneNazwyObiektowFizjograficznych (PRNG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O3_PozostaleNazwyObiektowFizjograficznych (PRNG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>M1_UrzedoweNazwyMiejscowosci (PRNG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>M2_PozostaleNazwyMiejscowosci (PRNG)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A00_Granice_panstwa (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A01_Granice_wojewodztw (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A02_Granice_powiatow (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A03_Granice_gmin (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A04_Granice_miast (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A05_Granice_jednostek_ewidencyjnych (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>A06_Granice_obrebow_ewidencyjnych (PRG_A)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>R01_Granice_rejonow_statystycznych (PRG_R)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>R02_Granice_obwodow_spisowych (PRG_R)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S01_Sad_apelacyjny (PRG_S)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S02_Sad_okregowy (PRG_S)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S03_Sad_rejonowy (PRG_S)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>S04_Wojewodzki_sad_administracyjny (PRG_S)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>P01_Prokuratura_regionalna (PRG_P)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>P02_Prokuratura_okregowa (PRG_P)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>P03_Prokuratura_rejonowa (PRG_P)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K01_Komenda_wojewodzka_policji (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K02_Komenda_powiatowa_policji (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K03_Komenda_stoleczna_policji (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K04_Komenda_rejonowa_policji (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K05_Komisariat_policji (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K06_Komenda_wojewodzka_strazy_pozarnej (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K07_Komenda_powiatowa_strazy_pozarnej (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K08_Oddzial_strazy_granicznej (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K09_Placowka_strazy_granicznej (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K10_Dywizjon_strazy_granicznej (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K11_Obszar_dzialania_szefa_obrony_cywilnej_wojewodztwa (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K12_Obszar_dzialania_szefa_obrony_cywilnej_powiatu (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>K13_Obszar_dzialania_szefa_obrony_cywilnej_gminy (PRG_K)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U01_Archiwum_panstwowe (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U02_Urzad_skarbowy (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U03_Wyspecjalizowany_urzad_skarbowy (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U04_Urzad_celno-skarbowy (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U05_Izba_administracji_skarbowej (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U06_Nadlesnictwo (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U07_Regionalna_dyrekcja_lasow_panstwowych (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U08_Zarzad_zlewni_PGWWP (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U09_Regionalny_zarzad_gospodarki_wodnej_PGWWP (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U10_Urzad_morski (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>U11_Urzad_zeglugi_srodladowej (PRG_U)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W01_Linia_podstawowa_morza_terytorialnego (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W02_Morze_terytorialne_RP (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W03_Morskie_wody_wewnetrzne (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W04_Wylaczna_strefa_ekonomiczna (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W05_Strefa_przylegla (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W06_Morskie_linie_brzegowe (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W07_Pas_nadbrzezny (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W08_Pas_ochronny (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W09_Pas_techniczny (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W10_Reda (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W11_Port_morski (PRG_W)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>W12_Przystan_morska (PRG_W)</string>
+         </property>
+        </item>
        </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="lbl_skorowidz_date">
+        <property name="text">
+         <string>Zakres dat:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cmb_skorowidz_rok"/>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cmb_skorowidz_rok_do"/>
       </item>
      </layout>
     </item>

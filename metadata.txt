@@ -5,9 +5,9 @@
 [general]
 name=Pobierz dane GUGiK
 qgisMinimumVersion=3.22
-qgisMaximiumVersion=3.99
+qgisMaximumVersion=3.99
 description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB. Plugin for downloading features from the EGiB collective WFS service.
-version=1.1.2
+version=1.2.9
 author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
 email=uslugi.iip@gugik.gov.pl
 
@@ -23,6 +23,25 @@ repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog=
+	1.2
+	Poprawiono:
+		- mechanizm pobierania obiektów dla warstw poligonowych
+		- style qml dla poszczególnych warstw
+	Dodano obsługę pobierania:
+		- PRG między innymi: adrey, ulice, place
+		- PRNG
+			* O1_UrzedoweNazwyObiektowFizjograficznych (PRNG)
+			* O2_ZestandaryzowaneNazwyObiektowFizjograficznych (PRNG)
+			* O3_PozostaleNazwyObiektowFizjograficznych (PRNG)
+			* M1_UrzedoweNazwyMiejscowosci (PRNG)
+			* M2_PozostaleNazwyMiejscowosci (PRNG)
+		- Dane ze skorowidzów:
+			* ortofotomapy
+			* prawdziwej ortofotomapy
+			* LIDAR (KRON86, EVRF2007)
+			* NMT (KRON86, EVRF2007)
+			* NMPT (KRON86, EVRF2007)
+		- Danych z powiatowych usług WFS zgłoszonych do EZiUDP
 	1.1
 	Dodano:
 		- obsługę pobierania budynków (EGIB), dzialek (RCN), budynków (RCN), lokali(RCN)
