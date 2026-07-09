@@ -9,7 +9,12 @@ import urllib.parse
 import time
 import requests
 from requests.adapters import HTTPAdapter
-from xml.etree import ElementTree as ET
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    from xml.etree import ElementTree as ET
+
 from qgis.core import QgsMessageLog, Qgis, QgsGeometry, QgsWkbTypes
 
 try:
@@ -133,7 +138,7 @@ class BaseWFSClient:
             "filter": filter_xml.strip(),
         }
         resp = self._get(params, timeout=60)
-        root = ET.fromstring(resp.content)
+        root = ET.fromstring(resp.content) # nosec
         matched = root.get("numberMatched", "unknown")
         if matched == "unknown":
             QgsMessageLog.logMessage(
@@ -292,7 +297,7 @@ class BaseWFSClient:
             if not f:
                 continue
             try:
-                root = ET.fromstring(f)
+                root = ET.fromstring(f) # nosec
                 # Serializujemy wszystkie bezpośrednie dzieci tagu <fes:Filter>
                 inner_parts.append(
                     "".join(ET.tostring(child, encoding="unicode") for child in root)

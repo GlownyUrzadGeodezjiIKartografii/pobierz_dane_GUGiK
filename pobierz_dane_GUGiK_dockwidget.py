@@ -1971,7 +1971,7 @@ class PD_GUGiKDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
                 )
 
                 try:
-                    with requests.get(url, stream=True) as r:
+                    with requests.get(url, stream=True, timeout=60) as r:
                         r.raise_for_status()
                         total_length = r.headers.get('content-length')
 

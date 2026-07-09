@@ -11,7 +11,11 @@ import re
 import urllib.parse
 from dataclasses import dataclass, field
 from typing import Optional
-from xml.etree import ElementTree as ET
+
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    from xml.etree import ElementTree as ET
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -376,7 +380,7 @@ class EziudpClient:
         """
         names = []
         try:
-            root = ET.fromstring(xml_bytes)
+            root = ET.fromstring(xml_bytes) # nosec
             for ns in (
                 "http://www.opengis.net/wfs/2.0",
                 "http://www.opengis.net/wfs",

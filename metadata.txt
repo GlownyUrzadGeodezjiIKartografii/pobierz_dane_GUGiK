@@ -7,11 +7,14 @@ name=Pobierz dane GUGiK
 qgisMinimumVersion=3.22
 qgisMaximumVersion=3.99
 description=Wtyczka do pobierania obiektów z usługi zbiorczej WFS EGIB. Plugin for downloading features from the EGiB collective WFS service.
-version=1.2.9
-author=Łukasz Świątek - Główny Urząd Geodezji i Kartografii
+version=1.2.11
+author=Główny Urząd Geodezji i Kartografii (GUGiK) - Łukasz Świątek
 email=uslugi.iip@gugik.gov.pl
 
-about=Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii. The plugin is used to download objects from aggregate WFS services provided by the Head Office of Geodesy and Cartography.
+about=Oficjalna wtyczka Głównego Urzędu Geodezji i Kartografii.
+	
+	Wtyczka służy do pobierania obiektów ze zbiorczych usług WFS udostępnianych przez Główny Urząd Geodezji i Kartografii.
+	The plugin is used to download objects from aggregate WFS services provided by the Head Office of Geodesy and Cartography.
 
 tracker=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK/issues
 repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
@@ -23,6 +26,8 @@ repository=https://github.com/GlownyUrzadGeodezjiIKartografii/pobierz_dane_GUGiK
 hasProcessingProvider=no
 # Uncomment the following line and add your changelog:
 changelog=
+	1.2.10
+	Drobne poprawki bezpieczeństwa
 	1.2
 	Poprawiono:
 		- mechanizm pobierania obiektów dla warstw poligonowych
@@ -65,7 +70,7 @@ tags=python,egib,gugik,wfs,pobieranie,pobieracz,uldk,powiat,download,kataster
 
 homepage=https://www.gov.pl/web/gugik
 category=Plugins
-icon=icon1000.png
+icon=icon400.jpg
 # experimental flag
 experimental=False
 
